@@ -56,19 +56,21 @@ app.layout = html.Div(children=[html.H1('SpaceX Launch Records Dashboard',
 # Add a callback function for `site-dropdown` as input, `success-pie-chart` as output
 # Function decorator to specify function input and output
 @app.callback(Output(component_id='success-pie-chart', component_property='figure'),
-              Input(component_id='site-dropdown', component_property='value'))
+                Input(component_id='site-dropdown', component_property='value'))
 def get_pie_chart(entered_site):
-    filtered_df = spacex_df
     if entered_site == 'ALL':
-        fig = px.pie(data, values='class', 
+        filtered_df = spacex_df.groupby('Launch Site')['class'].sum().to_frame().reset_index().rename(columns={"class": "nb_success"})
+        fig = px.pie(filtered_df, values='nb_success', 
         names='Launch Site', 
-        title='All Launch Sites')
+        title='Total Success Launches by Site')
         return fig
     else:
         # return the outcomes piechart for a selected site
-        filtered_df=spacex_df[spacex_df['Launch Site']== entered_site]
-        filtered_df=filtered_df.groupby(['Launch Site','class']).size().reset_index(name='class count')
-        fig=px.pie(filtered_df,values='class count',names='class',title=f"Total Success Launches for site {entered_site}")
+        filtered_df = spacex_df[spacex_df['Launch Site']==entered_site]['class'].value_counts().to_frame().reset_index()
+        filtered_df = filtered_df.rename(columns={"index": "class", "class": "count"})
+        fig = px.pie(filtered_df, values="count", 
+        names="class", 
+        title='Total Success Launches for '+ entered_site)
         return fig
 # TASK 4:
 # Add a callback function for `site-dropdown` and `payload-slider` as inputs, `success-payload-scatter-chart` as output
@@ -77,7 +79,6 @@ def get_pie_chart(entered_site):
                 Input(component_id='payload-slider',component_property='value')])
 def scatter(entered_site,payload):
     filtered_df = spacex_df[spacex_df['Payload Mass (kg)'].between(payload[0],payload[1])]
-    # thought reusing filtered_df may cause issues, but tried it out of curiosity and it seems to be working fine
     
     if entered_site=='ALL':
         fig=px.scatter(filtered_df,x='Payload Mass (kg)',y='class',color='Booster Version Category',title='Success count on Payload mass for all sites')
